@@ -1,0 +1,44 @@
+---
+- name: add percona repository
+  yum: name=http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm state=present
+  tags:
+  - percona
+  - percona-repo
+
+- name: install epel repo and percona-xtrabackup-24
+  yum: name={{item}} state=present
+  with_items:
+    - epel-release
+    - libev
+    - percona-xtrabackup-24
+  tags:
+  - percona
+  - percona-install
+
+- name: copy Percona backup script
+  copy: src=percona_backup.sh dest=/usr/local/bin/percona_backup mode=755
+  tags:
+  - percona
+  - percona-cron-backup
+
+- name: Remove old backup Schedule
+  cron: name="Percona mysql backup" state=absent
+  tags:
+  - percona
+  - percona-cron-backup
+
+- name: /mysql directory
+  file: path=/mysql/{{ item }} state=directory  
+  with_items:
+    - logs
+    - xtrabackup
+  tags:
+  - percona
+  - percona-cron-backup
+
+- name: Insert  Percona backup cron job
+  cron: name="Percona mysql backup" minute="0" hour="3" job='sh -c "/usr/local/bin/percona_backup > /mysql/logs/percona_backup_$(date +\%Y\%m\%d-\%H\%M\%S).log 2>&1"'
+  tags:
+  - percona
+  - percona-cron-backup
+

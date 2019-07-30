@@ -1,0 +1,32 @@
+---
+- name: Install mariaDB client
+  yum: name=mariadb state=present
+
+- name: Create backup dir
+  file: path=/mysql/backup state=directory mode=0755
+  tags:
+  - cron-backup
+
+- name: Remove old backup Schedule
+  cron: name="Backup Mysql" state=absent
+  tags:
+  - cron-backup
+
+
+- name: copy my.cnf from db host
+  become_user: vagrant
+  shell: 'sudo /usr/bin/rsync -ave "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /home/vagrant/.ssh/id_rsa"  --rsync-path="sudo rsync"  /root/.my.cnf vagrant@backup1.local:/root/'
+  delegate_to: mysql1.local
+  tags:
+  - mysql-my.cnf 
+
+- name: Schedule mysqldump backup cron job
+  cron: name="Backup Mysql" minute="0" hour="1" job='sh -c "/usr/bin/mysqldump -h mysql1.local --all-databases --single-transaction | gzip > /mysql/backup/backup-mysql1-$(date +\%Y\%m\%d-\%H\%M\%S).sql.gz"'
+  tags:
+  - cron-backup
+
+
+
+
+
+

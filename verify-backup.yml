@@ -1,0 +1,77 @@
+---
+- hosts: backup1.local
+  become: true
+  vars:
+    sql_Create_Insert_Data: "CREATE TABLE test_table (SerialNo INT, ProdName VARCHAR(20), Brand VARCHAR(20), Price INT); INSERT INTO test_table VALUES (1, 'Camera', 'Sony', 150);"
+    sql_Query_Data: "SELECT * FROM test_table;"
+    database: "db-xyz"
+
+
+
+  tasks:
+  - name: Install  mariaDB
+    yum: name=mariadb-server  state=present
+    tags:
+    - mysql
+    - mysql-server
+
+
+  - name: Add percona repository
+    yum: name=http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm state=present
+    tags:
+    - percona
+    - percona-repo
+
+  - name: Install epel repo and percona-xtrabackup-24
+    yum: name={{item}} state=present
+    with_items:
+      - epel-release
+      - libev
+      - percona-xtrabackup-24
+    tags:
+    - percona
+    - percona-install
+
+  - name: Enter test data to MariaDB
+    shell: mysql -e "{{ sql_Create_Insert_Data }}" test-db
+    delegate_to: mysql1.local
+    tags:
+      - enterData
+
+  - name: Make backup and get dirname
+    shell: "/usr/local/bin/percona_backup"
+    register: percona_backup_result
+    delegate_to: mysql1.local
+    tags:
+      - start-backup
+  
+  - set_fact: backup_dir_path="{{percona_backup_result.stdout_lines[5]|regex_findall('(/mysql/xtrabackup-[0-9]*$)')}}"
+
+  - name: Ensure MariaDB is down
+    systemd: name=mariadb  enabled=yes state=stopped
+
+  - name: Restore backup 
+    shell: "innobackupex --force-non-empty-directories --copy-back {{ backup_dir_path[0] }};chown -R mysql:mysql /var/lib/mysql"
+
+  - name: Ensure MariaDB is up
+    systemd: name=mariadb  enabled=yes state=started
+
+  - name: Query test data from restored MariaDB
+    shell: mysql -e "{{ sql_Query_Data }}" test-db
+    register: TestQueryOutput
+
+  - debug: msg="{{ TestQueryOutput.stdout_lines[1] }}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+  

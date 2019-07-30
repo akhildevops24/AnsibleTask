@@ -1,0 +1,66 @@
+---
+- name: install  mariaDB
+  yum: name=mariadb-server  state=present
+  tags:
+  - mysql
+  - mysql-server
+
+- name: install MySQL-python
+  yum: name=MySQL-python state=present
+  tags:
+  - mysql
+  - mysql-server
+
+
+- name: Start DB
+  systemd: name=mariadb  enabled=yes state=started
+  tags:
+  - mysql
+  - mysql-start
+
+- name: create dbadmin user
+  mysql_user: name={{mysql.user}} password={{mysql.password}} priv={{mysql.privileges}} host={{ item }} state=present
+  with_items:
+     - localhost
+     - "{{ mysql.host }}"
+  tags:
+  - mysql
+  - mysql-user
+
+- name: copy my.cnf
+  template: src=my.cnf.j2 dest=~/.my.cnf mode=0600 owner=root
+  tags:
+  - mysql
+  - mysql-my.cnf
+
+- name: change root user with password
+  mysql_user:  name=root password={{ root_password }} state=present
+  tags:
+  - mysql
+
+- name: delete anonymous user
+  mysql_user: name='' host_all=yes state=absent
+  tags:
+  - mysql
+
+- name: delete test DB
+  mysql_db: name=test state=absent
+  tags:
+  - mysql
+
+- name: create mysql database
+  mysql_db: name={{mysql.database}} state=present
+  tags:
+  - mysql
+  - mysql-database
+
+- name: bind mysql remote address
+  ini_file: dest=/etc/my.cnf
+            section=mysqld
+            option=bind-address
+            value={{ mysql.bind }}
+  tags:
+  - mysql
+  - mysql-configure
+  notify:
+  - Restart MariaDB

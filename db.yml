@@ -1,0 +1,16 @@
+---
+- hosts: mysql1.local
+  become: true
+  roles:
+  - setup
+  - db
+  - backup-percona
+  vars:
+    root_password: s3cr3t
+    mysql:
+      database: db-xyz
+      user: admin
+      password: s3cr3t
+      privileges: '*.*:ALL'
+      host: '%'
+      bind: '0.0.0.0'
