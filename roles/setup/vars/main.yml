@@ -1,8 +1,6 @@
 ---
-db_hostname_short: mysql1
-db_hostname: "{{ db_hostname_short }}.local"
-db_ip: 192.168.0.10
-backup_hostname_short: backup
-backup_hostname: "{{ backup_hostname_short }}.local"
-backup_ip: 192.168.0.11
+db_hostname: "mysql1.local"
+db_ip: 192.168.0.9
+backup_hostname: "backup1.local"
+backup_ip: 192.168.0.10
 
