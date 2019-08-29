@@ -1,5 +1,5 @@
 ---
-- hosts: backup.local
+- hosts: backup1.local
   become: true
   roles:
     - setup
